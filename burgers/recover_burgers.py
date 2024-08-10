@@ -19,8 +19,7 @@ import scipy
 import numpy as np
 import sys
 
-# sys.path.append('/public/home/mzh/maskl/navier_stokes/')
-# sys.path.append('/Users/maozihao/Downloads/navier-stocks/')
+sys.path.append("../")
 from utils import LpLoss
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

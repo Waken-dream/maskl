@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 import random
 import matplotlib
 import numpy as np
@@ -9,7 +8,6 @@ import re
 import torch
 import matplotlib.pyplot as plt
 
-sys.path.append("../")
 from models import *
 from utils import LpLoss, add_noise, set_seed, mask_data
 
