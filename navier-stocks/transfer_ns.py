@@ -12,7 +12,7 @@ $ python transfer_ns.py --local_rank 1 --world_size 1
 import logging
 import os
 import random
-
+import sys
 import numpy as np
 import scipy
 import torch
@@ -22,6 +22,7 @@ from torch.utils.data.distributed import DistributedSampler
 from models import ON, DON, DON_lite
 from utils import LpLoss, add_noise, mask_data, mean_mask_data
 
+sys.path.append("../")
 os.environ["CUDA_DEVICES_MAX_CONNECTIONS"]='1'
 os.environ["OMP_NUM_THREADS"] = "1"
 

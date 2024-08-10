@@ -6,9 +6,11 @@ $ python test.py --model DON --model_path ./checkpoint/re_t-noise1220.pth
 import random
 import torch
 import os
+import sys
 import numpy as np
 import scipy
 
+sys.path.append("../")
 from models import *
 import matplotlib.pyplot as plt
 from utils import LpLoss, add_noise

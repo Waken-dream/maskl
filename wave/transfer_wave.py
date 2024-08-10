@@ -13,8 +13,7 @@ import torch.distributed as dist
 import torch.nn.functional as F
 from torch.utils.data.distributed import DistributedSampler
 
-sys.path.append('/public/home/mzh/maskl/navier_stokes/')
-sys.path.append('/Users/maozihao/Downloads/navier-stocks/')
+sys.path.append('../')
 from models import ON, DON
 from utils import LpLoss, mask_data, mean_mask_data, set_seed
 

@@ -18,6 +18,7 @@ import scipy
 import numpy as np
 import sys
 
+sys.path.append("../")
 from models import ON, MTN, FNO2d, DON
 from utils import LpLoss, mask_data, add_noise, mean_mask_data
 

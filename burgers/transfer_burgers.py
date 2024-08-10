@@ -26,7 +26,7 @@ from torch.utils.data.distributed import DistributedSampler
 from gan_recover import GanRecover
 from recover_burgers import ON, _mask_data, _set_seed, mean_mask_data
 
-#sys.path.append('/public/home/mzh/maskl/navier_stokes/')
+sys.path.append("../")
 from utils import LpLoss
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
