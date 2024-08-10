@@ -1,0 +1,24 @@
+scripts/
+output/
+*.log
+
+# C extensions
+*.so
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# Mac OS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Data
+data/*
+
+# Jupyter
+*.ipynb
+
