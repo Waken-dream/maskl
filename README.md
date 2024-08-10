@@ -4,7 +4,7 @@
 ```bash
 conda create -n mask python=3.11
 conda activate mask
-conda install -r requirements.txt
+conda install --file requirements.txt
 ```
 
 ## Run
