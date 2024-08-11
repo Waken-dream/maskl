@@ -5,7 +5,7 @@ $ torchrun --standalone --nnodes 1 --nproc_per_node 2  recover_ns.py --mask_rate
 $ torchrun --standalone --nnodes 1 --nproc_per_node 2  recover_ns.py --mask_rate 0.4 --master_port 20503
 '''
 
-import datetime
+import time
 import logging
 import os
 
@@ -18,7 +18,9 @@ import scipy
 import numpy as np
 import sys
 
-sys.path.append("../")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+sys.path.append(parent_dir)
 from models import ON, MTN, FNO2d, DON
 from utils import LpLoss, mask_data, add_noise, mean_mask_data
 
@@ -79,7 +81,7 @@ def mask_train(epochs: int, model: nn.Module, train_loader, test_loader):
 
             if test_l2_step < better_loss:
                 better_loss = loss.item()
-                torch.save(model.module.state_dict(), f"./checkpoint/re_mean_{args.mask_rate}" + args.scheme + f"_noise:{args.noise}0802" + ".pth")
+                torch.save(model.module.state_dict(), f"./checkpoint/re_mean_{args.mask_rate}" + args.scheme + f"_{time.strftime("%m%d", time.localtime())}.pth")
 
         if epoch % 10 == 0:
             print(epoch, train_l2_step / 160)
@@ -91,7 +93,7 @@ def mask_train(epochs: int, model: nn.Module, train_loader, test_loader):
 if __name__ == "__main__":
     args = args()
     logging.basicConfig(level=logging.DEBUG,
-                        filename=os.path.join(os.getcwd(), f"./runlog/re_mean_{args.mask_rate}" + str(args.scheme)[1:] + "0802" + ".log"),
+                        filename=os.path.join(os.getcwd(), f"./runlog/re_mean_{args.mask_rate}" + str(args.scheme)[1:] + time.strftime("%m%d", time.localtime()) + ".log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))

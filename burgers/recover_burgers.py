@@ -19,7 +19,9 @@ import scipy
 import numpy as np
 import sys
 
-sys.path.append("../")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+sys.path.append(parent_dir)
 from utils import LpLoss
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

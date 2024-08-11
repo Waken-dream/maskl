@@ -19,10 +19,12 @@ import torch
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+sys.path.append(parent_dir)
 from models import ON, DON, DON_lite
 from utils import LpLoss, add_noise, mask_data, mean_mask_data
 
-sys.path.append("../")
 os.environ["CUDA_DEVICES_MAX_CONNECTIONS"]='1'
 os.environ["OMP_NUM_THREADS"] = "1"
 

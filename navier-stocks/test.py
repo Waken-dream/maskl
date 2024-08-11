@@ -9,12 +9,13 @@ import os
 import sys
 import numpy as np
 import scipy
-
-sys.path.append("../")
-from models import *
 import matplotlib.pyplot as plt
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+sys.path.append(parent_dir)
+from models import *
 from utils import LpLoss, add_noise
-import matplotlib as plt
 
 
 def args():

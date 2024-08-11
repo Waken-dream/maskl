@@ -8,6 +8,7 @@ import numpy as np
 import sys
 import logging
 import os
+import time
 import random
 import torch
 import torch.nn as nn
@@ -15,7 +16,9 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 
-sys.path.append('../')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+sys.path.append(parent_dir)
 from utils import LpLoss, mean_mask_data
 from models import ON
 
@@ -45,6 +48,7 @@ def args():
 
 def mask_train(epochs: int, model: nn.Module, train_loader, test_loader):
     better_loss = 10000000
+    date_time = str(time.strftime('%m%d', time.localtime()))
     for epoch in range(epochs):
         model.train()
         train_l2_step = 0
@@ -75,7 +79,8 @@ def mask_train(epochs: int, model: nn.Module, train_loader, test_loader):
 
             if test_l2_step < better_loss:
                 better_loss = loss.item()
-                torch.save(model.module.state_dict(), f"./checkpoint/re_mean_{args.mask_rate}" + args.scheme + f"_noise:{args.noise}0802" + ".pth")
+                torch.save(model.module.state_dict(),
+                           os.path.join(os.path.dirname(os.path.abspath(__file__)), f"./checkpoint/re_mean_{args.mask_rate}wave_{date_time}.pth"))
 
         if epoch % 10 == 0:
             print(epoch, train_l2_step / 160)
@@ -86,8 +91,8 @@ def mask_train(epochs: int, model: nn.Module, train_loader, test_loader):
 if __name__ == '__main__':
     args = args()
     logging.basicConfig(level=logging.DEBUG,
-                        filename=os.path.join(os.getcwd(), f"./runlog/re_mean_{args.mask_rate}" + str(args.scheme)[
-                                                                                                  1:] + f"_noise:{args.noise}0802" + ".log"),
+                        filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), f"./runlog/re_mean_{args.mask_rate}" + str(args.scheme)
+                                                                                                   + f"_{time.strftime('%m%d', time.localtime())}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
@@ -129,13 +134,13 @@ if __name__ == '__main__':
     print(torch.distributed.is_initialized())
 
     masked_test_a = mean_mask_data(test_a, mask_rate=0.5)
-    masked_test_a = torch.tensor(masked_test_a)
+    masked_test_a = torch.tensor(masked_test_a).float()
     test_a = torch.tensor(test_a).float()
     test_u = torch.tensor(test_u).float()
     test_dataset = torch.utils.data.TensorDataset(masked_test_a, test_a, test_u)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=3, shuffle=True)
 
-    for time in range(mask_times):
+    for mask_time in range(mask_times):
         masked_train_a = mean_mask_data(train_a, mask_rate=args.mask_rate)
         masked_train_a = torch.tensor(masked_train_a).float()
         train_a = torch.tensor(train_a).float()

@@ -5,6 +5,7 @@ $ torchrun --standalone --nnodes 1 --nproc_per_node 2 transfer_wave.py --spectra
 
 import logging
 import os
+import time
 import sys
 import scipy
 import torch
@@ -13,7 +14,9 @@ import torch.distributed as dist
 import torch.nn.functional as F
 from torch.utils.data.distributed import DistributedSampler
 
-sys.path.append('../')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+sys.path.append(parent_dir)
 from models import ON, DON
 from utils import LpLoss, mask_data, mean_mask_data, set_seed
 
@@ -200,6 +203,7 @@ def transfer_learning(tmodel, epochs, train_loader, test_loader):
 def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, train_loader, test_loader, T=200,
                        num_intervals=5):
     better_loss = 10000000
+    date_time = str(time.strftime('%m%d', time.localtime()))
     interval = T // num_intervals  # 16
     assert interval // out_slices == interval / out_slices, "Out slices must divide Time interval !"
     for num in range(num_intervals-1):  # Divide timeline into intervals
@@ -285,7 +289,8 @@ def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, trai
                 if equal_test_l2_loss < better_loss:
                     better_loss = equal_test_l2_loss
                     if dist.get_rank() == 0:
-                        torch.save(tmodel.module.state_dict(), f"./results/spectral_trans_wave{args.mask_rate}_0808.pth")
+                        torch.save(tmodel.module.state_dict(), 
+                                   os.path.join(os.path.abspath(__file__), f"./checkpoint/spectral_trans_wave{args.mask_rate}_{date_time}.pth"))
 
             if epoch % 10 == 0:
                 logging.info(
@@ -298,7 +303,7 @@ def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, trai
 if __name__ == '__main__':
     args = args()
     logging.basicConfig(level=logging.DEBUG,
-                        filename=os.path.join(os.getcwd(), "./runlog/mean_trans_0808" + ".log"),
+                        filename=os.path.join(os.path.abspath(__file__), f"./runlog/mean_trans_{time.strftime('%m%d', time.localtime())}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))

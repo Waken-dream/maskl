@@ -9,7 +9,9 @@ import re
 import torch
 import matplotlib.pyplot as plt
 
-sys.path.append("../")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+sys.path.append(parent_dir)
 from models import *
 from utils import LpLoss, add_noise, set_seed, mask_data
 

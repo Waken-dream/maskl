@@ -1,6 +1,8 @@
 scripts/
 output/
 *.log
+*.out
+*.pth
 
 # C extensions
 *.so

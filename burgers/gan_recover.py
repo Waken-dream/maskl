@@ -18,8 +18,9 @@ import numpy as np
 import sys
 
 
-sys.path.append('/public/home/mzh/maskl/navier_stokes/')
-sys.path.append('/Users/maozihao/Downloads/navier-stocks/')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+sys.path.append(parent_dir)
 from utils import LpLoss
 from recover_burgers import get_grid, _mask_data, mean_mask_data, _set_seed, MLC, ON
 

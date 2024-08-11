@@ -8,8 +8,9 @@ import scipy
 import operator
 import matplotlib.pyplot as plt
 
-sys.path.append('/public/home/mzh/maskl/navier_stokes/')
-sys.path.append('/Users/maozihao/Downloads/navier-stocks/')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+sys.path.append(parent_dir)
 from models import *
 from functools import reduce, partial
 from utils import LpLoss, add_noise, mask_data, set_seed
