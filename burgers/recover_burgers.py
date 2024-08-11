@@ -8,7 +8,7 @@ $ torchrun --standalone --nnodes 1 --nproc_per_node 2  recover_burgers.py --mask
 import logging
 import os
 import random
-
+import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -42,7 +42,7 @@ def args():
     parse.add_argument("--noise", action="store_true", default=False, help="Add Random Gaussian Noise")
     parse.add_argument("--transfer", action="store_true", default=False, help="Transfer Learning")
     parse.add_argument("--local_rank", default=os.getenv('LOCAL_RANK', -1), type=int)
-    parse.add_argument("--master_port", default=20501, type=int)
+    parse.add_argument("--master_port", default=20500, type=int)
 
     args = parse.parse_args()
     return args
@@ -151,7 +151,7 @@ def mask_train(epochs: int, model: nn.Module, train_loader):
             if train_l2_full < better_loss:
                 better_loss = loss.item()
                 torch.save(model.module.state_dict(),
-                               f"./results/mean_re_burgers_{args.mask_rate}" + f"_0802a" + ".pth")
+                               f"./results/mean_re_burgers_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.pth")
 
             optimizer.zero_grad()
             loss.backward()
@@ -168,7 +168,7 @@ if __name__ == "__main__":
     args = args()
     logging.basicConfig(level=logging.DEBUG,
                         filename=os.path.join(os.getcwd(),
-                                              f"./results/mean_re_burgers_{args.mask_rate}" + f"_0802a.log"),
+                                              f"./results/mean_re_burgers_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     mask_times = args.mask_times
     print(torch.distributed.is_initialized())
 
-    for time in range(mask_times):  # 4
+    for mask_time in range(mask_times):  # 4
         masked_train_a = mean_mask_data(train_a, mask_rate=args.mask_rate)
         train_dataset = torch.utils.data.TensorDataset(masked_train_a, train_a, train_u)
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)

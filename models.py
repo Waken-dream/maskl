@@ -176,7 +176,7 @@ class MTN(nn.Module):
         grid = get_grid(shape=x.shape, device=x.device)
         x = torch.cat((x, grid), dim=-1)  # Add two dimension of location information (1,256,256,160+2)
         x = self.p(x)  # into latent space
-        x = x.permute(0, 3, 1, 2)
+        x = x.permute(0, 3, 1, 2).contiguous()
         x1 = x
 
         # forward propagation
@@ -189,7 +189,7 @@ class MTN(nn.Module):
         x = x + x1
 
         x = self.q(x)
-        x = x.permute(0, 2, 3, 1)  # back to original space
+        x = x.permute(0, 2, 3, 1).contiguous()  # back to original space
         return x
 
 
@@ -213,7 +213,7 @@ class ON(nn.Module):
         grid = get_grid(shape=x.shape, device=x.device)
         x = torch.cat((x, grid), dim=-1)  # Add two dimension of location information (1,256,256,160+2)
         x = self.p(x)  # into latent space
-        x = x.permute(0, 3, 1, 2)
+        x = x.permute(0, 3, 1, 2).contiguous() 
         x1 = x
 
         # forward propagation
@@ -224,7 +224,7 @@ class ON(nn.Module):
         x = x + x1
 
         x = self.q(x)
-        x = x.permute(0, 2, 3, 1)  # back to original space
+        x = x.permute(0, 2, 3, 1).contiguous()   # back to original space
         return x
 
 

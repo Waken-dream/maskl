@@ -112,7 +112,7 @@ class TimeDon2d(torch.nn.Module):
         b = time_embed(x, t)
         x = x + b
         # x = x.permute(0, 2, 1)
-        x = torch.permute(x, [0, 3, 1, 2])
+        x = torch.permute(x, [0, 3, 1, 2]).contiguous()
         x = self.p(x)
         x1 = x
         x = self.gelu(self.conv1(x))
@@ -126,7 +126,7 @@ class TimeDon2d(torch.nn.Module):
         x = self.gelu(self.q(x))
         # x = self.avgpool(x)
         # x = x.permute(0, 2, 1)
-        x = torch.permute(x, [0, 2, 3, 1])
+        x = torch.permute(x, [0, 2, 3, 1]).contiguous()
         return x
 
 
@@ -203,7 +203,7 @@ def transfer_learning(tmodel, epochs, train_loader, test_loader):
 def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, train_loader, test_loader, T=200,
                        num_intervals=5):
     better_loss = 10000000
-    date_time = str(time.strftime('%m%d', time.localtime()))
+    date_time = time.strftime('%m%d', time.localtime())
     interval = T // num_intervals  # 16
     assert interval // out_slices == interval / out_slices, "Out slices must divide Time interval !"
     for num in range(num_intervals-1):  # Divide timeline into intervals
@@ -290,7 +290,7 @@ def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, trai
                     better_loss = equal_test_l2_loss
                     if dist.get_rank() == 0:
                         torch.save(tmodel.module.state_dict(), 
-                                   os.path.join(os.path.abspath(__file__), f"./checkpoint/spectral_trans_wave{args.mask_rate}_{date_time}.pth"))
+                                   os.path.join(os.path.dirname(os.path.abspath(__file__)), f"./checkpoint/spectral_trans_wave{args.mask_rate}_{date_time}.pth"))
 
             if epoch % 10 == 0:
                 logging.info(
@@ -303,7 +303,7 @@ def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, trai
 if __name__ == '__main__':
     args = args()
     logging.basicConfig(level=logging.DEBUG,
-                        filename=os.path.join(os.path.abspath(__file__), f"./runlog/mean_trans_{time.strftime('%m%d', time.localtime())}.log"),
+                        filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), f"./runlog/mean_trans_{time.strftime('%m%d', time.localtime())}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))

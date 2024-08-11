@@ -36,7 +36,7 @@ def args():
     parse.add_argument("--scheme", default="mask", type=str)
     parse.add_argument("--epochs", default=10000, type=int)
     parse.add_argument("--batch_size", default=1, type=int)
-    parse.add_argument("--data_path", default="..data/ns_data.mat", type=str)
+    parse.add_argument("--data_path", default="../data/ns_data.mat", type=str)
     parse.add_argument("--lr", default=0.001, type=float, help="learning rate")
     parse.add_argument("--mask_times", default=4, type=int)
     parse.add_argument("--mask_rate", default=0.15, type=float)
@@ -81,7 +81,7 @@ def mask_train(epochs: int, model: nn.Module, train_loader, test_loader):
 
             if test_l2_step < better_loss:
                 better_loss = loss.item()
-                torch.save(model.module.state_dict(), f"./checkpoint/re_mean_{args.mask_rate}" + args.scheme + f"_{time.strftime("%m%d", time.localtime())}.pth")
+                torch.save(model.module.state_dict(), f"./checkpoint/re_mean_{args.mask_rate}" + args.scheme + f"_{time.strftime('%m%d', time.localtime())}.pth")
 
         if epoch % 10 == 0:
             print(epoch, train_l2_step / 160)
@@ -93,7 +93,7 @@ def mask_train(epochs: int, model: nn.Module, train_loader, test_loader):
 if __name__ == "__main__":
     args = args()
     logging.basicConfig(level=logging.DEBUG,
-                        filename=os.path.join(os.getcwd(), f"./runlog/re_mean_{args.mask_rate}" + str(args.scheme)[1:] + time.strftime("%m%d", time.localtime()) + ".log"),
+                        filename=os.path.join(os.getcwd(), f"./runlog/re_mean_{args.mask_rate}" + str(args.scheme) + time.strftime("%m%d", time.localtime()) + ".log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
@@ -157,11 +157,11 @@ if __name__ == "__main__":
     masked_test_a = torch.tensor(masked_test_a)
     test_a = torch.tensor(test_a)
     test_u = torch.tensor(test_u)
-    print(f"masked_test_a: {masked_test_a.shape}, test_a: {test_a.shape}, test_u: {test_u.shape}")
+    #print(f"masked_test_a: {masked_test_a.shape}, test_a: {test_a.shape}, test_u: {test_u.shape}")
     test_dataset = torch.utils.data.TensorDataset(masked_test_a, test_a, test_u)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=3, shuffle=True)
 
-    for time in range(mask_times):  # 4
+    for mask_time in range(mask_times):  # 4
         # masked_train_a = mask_data(train_a.to('cpu').numpy(), mask_rate=args.mask_rate)
         masked_train_a = mean_mask_data(train_a.to('cpu').numpy(), mask_rate=args.mask_rate)
         # masked_time.unsqueeze(0).repeat(train_a.shape[0], 1, 1) #(train_a.shape[-1],1,160)

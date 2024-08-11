@@ -156,3 +156,5 @@ if __name__ == '__main__':
                    model=model,
                    train_loader=train_loader,
                    test_loader=test_loader)
+        
+        train_a = train_a.to('cpu').numpy()
