@@ -12,6 +12,7 @@ $ torchrun --standalone --nnodes 1 --nproc_per_node 2 transfer_burgers.py --spec
 import logging
 import os
 import sys
+import time
 import random
 import numpy as np
 import scipy
@@ -157,6 +158,7 @@ class TimeDon1d(torch.nn.Module):
 
 def transfer_learning(tmodel, epochs, train_loader, test_loader):
     better_loss = 10000000
+    date_time = time.strftime('%m%d', time.localtime())
 
     for epoch in range(epochs):
         tmodel.train()
@@ -217,7 +219,7 @@ def transfer_learning(tmodel, epochs, train_loader, test_loader):
                     better_loss = test_l2_full
                     if dist.get_rank() == 0:
                         torch.save(tmodel.module.state_dict(),
-                                   f"./results/checkpoint/mean_trans_burgers{args.mask_rate}_0613.pth")
+                                   f"./results/mean_trans_burgers{args.mask_rate}_{date_time}.pth")
 
         if epoch % 10 == 0:
             print(epoch, train_l2_step / 16 / T, train_l2_full / 16, test_l2_step / 4 / T, test_l2_full / 4)
@@ -230,6 +232,7 @@ def transfer_learning(tmodel, epochs, train_loader, test_loader):
 
 def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, train_loader, test_loader, T=200,
                        num_intervals=5):
+    date_time = time.strftime('%m%d', time.localtime())
     recover_model.eval()
     better_loss = 10000000
     interval = T // num_intervals  # 40
@@ -237,7 +240,7 @@ def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, trai
 
     for num in range(num_intervals-1):  # Divide timeline into intervals
         each_epoch = epochs // num_intervals
-        time = torch.arange(num * interval, num * interval + interval)  # Relative time
+        rel_time = torch.arange(num * interval, num * interval + interval)  # Relative time
         #autograd.set_detect_anomaly(True)
         for epoch in range(each_epoch):
             tmodel.train()
@@ -319,7 +322,7 @@ def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, trai
                 if equal_test_l2_loss < better_loss:
                     better_loss = equal_test_l2_loss
                     if dist.get_rank() == 0:
-                        torch.save(tmodel.module.state_dict(), f"./results/checkpoint/spectral_trans_burgers{args.mask_rate}_0613.pth")
+                        torch.save(tmodel.module.state_dict(), f"./results/spectral_trans_burgers{args.mask_rate}_{date_time}.pth")
 
             if epoch % 10 == 0:
                 logging.info(
@@ -333,7 +336,7 @@ if __name__ == "__main__":
     args = args()
     logging.basicConfig(level=logging.DEBUG,
                         filename=os.path.join(os.getcwd(),
-                                              f"./results/burgers_trans{args.mask_rate}_0613.log"),
+                                              f"./runlog/burgers_trans{args.mask_rate}_{time.strftime('%m%d', time.localtime())}_{args.spectral}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
@@ -370,10 +373,10 @@ if __name__ == "__main__":
     device = torch.device('cuda', local_rank)
     dist.init_process_group(backend='nccl', world_size=torch.cuda.device_count())
 
-    #model = ON(in_features=train_a.shape[-1], width=20).cuda()
-    #model_state_dict = torch.load('./results/' + args.origin_model + '.pth')
-    model = GanRecover(in_features=train_a.shape[-1], width=80).to(device)
-    model_state_dict = torch.load("./results/checkpoint/generator_0.4_0525a.pth", map_location=torch.device('cpu'))
+    model = ON(in_features=train_a.shape[-1], width=20).cuda()
+    model_state_dict = torch.load('./results/' + args.origin_model + '.pth')
+    #model = GanRecover(in_features=train_a.shape[-1], width=80).to(device)
+    #model_state_dict = torch.load("./results/checkpoint/generator_0.4_0525a.pth", map_location=torch.device('cpu'))
     model.load_state_dict(model_state_dict, False)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
     loss_fn = LpLoss(size_average=False)
@@ -394,7 +397,7 @@ if __name__ == "__main__":
                                               sampler=test_sampler)
 
     if not args.spectral:
-        tmodel = DON(origin_model=model, in_features=model.in_feature, width=model.width, out=1).cuda()
+        tmodel = DON(origin_model=model, in_features=model.module.in_feature, width=model.module.width).cuda()
         tmodel = torch.nn.parallel.DistributedDataParallel(tmodel, device_ids=[local_rank],
                                                            output_device=local_rank)  # multiply nodes
         optimizer = torch.optim.Adam(tmodel.module.new_layer.parameters(), lr=learning_rate, weight_decay=1e-4)

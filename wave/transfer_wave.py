@@ -132,6 +132,7 @@ class TimeDon2d(torch.nn.Module):
 
 def transfer_learning(tmodel, epochs, train_loader, test_loader):
     better_loss = 10000000
+    date_time = time.strftime('%m%d', time.localtime())
     for epoch in range(epochs):
         tmodel.train()
         train_l2_step = 0
@@ -191,7 +192,7 @@ def transfer_learning(tmodel, epochs, train_loader, test_loader):
                     better_loss = test_l2_full
                     if dist.get_rank() == 0:
                         torch.save(tmodel.module.state_dict(),
-                                   f"./results/mean_trans_wave{args.mask_rate}_0808.pth")
+                                   f"./results/mean_trans_wave{args.mask_rate}_{date_time}.pth")
 
         if epoch % 10 == 0:
             print(epoch, train_l2_step / 16 / T, train_l2_full / 16, test_l2_step / 4 / T, test_l2_full / 4)
@@ -208,7 +209,7 @@ def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, trai
     assert interval // out_slices == interval / out_slices, "Out slices must divide Time interval !"
     for num in range(num_intervals-1):  # Divide timeline into intervals
         each_epoch = epochs // num_intervals
-        time = torch.arange(num * interval, num * interval + interval)  # Relative time
+        rel_time = torch.arange(num * interval, num * interval + interval)  # Relative time
         # autograd.set_detect_anomaly(True)
         for epoch in range(each_epoch):
             tmodel.train()
@@ -290,7 +291,7 @@ def new_transfer_train(recover_model, tmodel, epochs: int, out_slices: int, trai
                     better_loss = equal_test_l2_loss
                     if dist.get_rank() == 0:
                         torch.save(tmodel.module.state_dict(), 
-                                   os.path.join(os.path.dirname(os.path.abspath(__file__)), f"./checkpoint/spectral_trans_wave{args.mask_rate}_{date_time}.pth"))
+                                   os.path.join(os.path.dirname(os.path.abspath(__file__)), f"./results/spectral_trans_wave{args.mask_rate}_{date_time}.pth"))
 
             if epoch % 10 == 0:
                 logging.info(

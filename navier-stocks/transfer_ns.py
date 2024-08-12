@@ -11,6 +11,7 @@ $ python transfer_ns.py --local_rank 1 --world_size 1
 """
 import logging
 import os
+import time
 import random
 import sys
 import numpy as np
@@ -43,11 +44,12 @@ def args():
 
     parser.add_argument("--epochs", default=10000, type=int)
     parser.add_argument("--batch_size", default=1, type=int)
-    parser.add_argument("--data_path", default="..data/ns_data.mat", type=str)
+    parser.add_argument("--data_path", default="../data/ns_data.mat", type=str)
     parser.add_argument("--lr", default=0.001, type=float, help="learning rate")
     parser.add_argument("--mask_times", default=4, type=int)
     parser.add_argument("--mask_rate", default=0.15, type=float)
     parser.add_argument("--model", default='DON', type=str)
+    parser.add_argument("--origin_model", default="re_mean_0.4mask_0812", type=str)
     parser.add_argument("--noise", action="store_true", default=False, help="Add Random Gaussian Noise")
     parser.add_argument("--local_rank", type=int, default=-1)
     parser.add_argument('--world_size', default=2, help="world size")
@@ -60,6 +62,7 @@ def args():
 
 def transfer_learning(tmodel, epochs, train_loader, test_loader):
     better_loss = 10000000
+    date_time = time.strftime('%m%d', time.localtime())
 
     for epoch in range(epochs):
         tmodel.train()
@@ -119,7 +122,7 @@ def transfer_learning(tmodel, epochs, train_loader, test_loader):
                     #dist.barrier()
                     better_loss = test_l2_full
                     if dist.get_rank() == 0:
-                        torch.save(tmodel.module.state_dict(), "./checkpoint/re_mean0.4_t_0424" + ".pth")
+                        torch.save(tmodel.module.state_dict(), f"./checkpoint/tran_mean_{args.mask_rate}_{date_time}" + ".pth")
 
         if epoch % 10 == 0:
             print(epoch, train_l2_step / 16 / T, train_l2_full / 16, test_l2_step / 4 / T, test_l2_full / 4)
@@ -140,7 +143,7 @@ def set_seed(seed):
 if __name__ == "__main__":
     args = args()
     logging.basicConfig(level=logging.DEBUG,
-                        filename=os.path.join(os.getcwd(), "./runlog/mean_trans_0424" + ".log"),
+                        filename=os.path.join(os.getcwd(), f"./runlog/mean_trans_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}" + ".log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
@@ -208,9 +211,9 @@ if __name__ == "__main__":
 
     model = ON(in_features=train_a.shape[-1], width=20)
     if device == torch.device('cpu'):
-        model_state_dict = torch.load('./checkpoint/re_mean_0.4mask_noise_False0423.pth', map_location=torch.device('cpu'))
+        model_state_dict = torch.load(f'./checkpoint/{args.origin_model}.pth', map_location=torch.device('cpu'))
     else:
-        model_state_dict = torch.load('./checkpoint/re_mean_0.4mask_noise_False0423.pth')
+        model_state_dict = torch.load(f'./checkpoint/{args.origin_model}.pth')
     model.load_state_dict(model_state_dict, False)
 
     if args.model == 'DON':
