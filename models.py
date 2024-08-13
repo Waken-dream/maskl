@@ -274,3 +274,74 @@ class DON_lite(nn.Module):
 
         return x
 
+def time_embed(x:torch.Tensor,t:float)->torch.Tensor:
+    """
+    TIme embedding as Transformer
+    x.shape: (batch_size, resolution, time)
+    """
+    channels, resolution, _, in_features= x.shape
+    b = torch.arange(t, t + in_features, device=x.device, dtype=torch.float32)
+    b = b.repeat(channels, resolution, resolution, 1)
+    c = torch.sin(b/in_features)
+    d = torch.cos(b/in_features)
+    b[:, :, :, ::2] = c[:, :, :, ::2]
+    b[:, :, :, 1::2] = d[:, :, :, 1::2]
+    return b
+
+
+class MLC_2(nn.Module):
+    def __init__(self, in_channels, out_channels, mid_channels):
+        super(MLC_2, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1)
+        self.norm1 = nn.InstanceNorm2d(mid_channels)
+        self.norm2 = nn.InstanceNorm2d(out_channels)
+
+    def forward(self, x):
+        x = self.norm1(self.conv1(x))
+        x = F.relu(x)
+        x = self.norm2(self.conv2(x))
+        return x
+
+class TimeDon2d(torch.nn.Module):
+    """
+    Time DON to predict 2D tensor Type Data
+    Input Tensor: num * resolution * time
+    """
+
+    def __init__(self, in_features, out_features, width):
+        super(TimeDon2d, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.width = width
+        self.gelu = torch.nn.GELU()
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.avgpool = nn.AvgPool2d(kernel_size=3, stride=2, padding=1)
+        self.p = MLC_2(self.in_features, self.width*2, self.width)
+        self.conv1 = MLC_2(self.width*2, self.width*4, self.width*4)
+        self.conv2 = MLC_2(self.width*4, self.width*2, self.width*4)
+        self.conv3 = MLC_2(self.width*2, self.width*2, self.width*2)
+        self.conv4 = MLC_2(self.width*2, self.width*2, self.width*2)
+        self.q = MLC_2(self.width*2, self.out_features, self.width*2)
+
+
+    def forward(self, x, t):
+        b = time_embed(x, t)
+        x = x + b
+        # x = x.permute(0, 2, 1)
+        x = torch.permute(x, [0, 3, 1, 2]).contiguous()
+        x = self.p(x)
+        x1 = x
+        x = self.gelu(self.conv1(x))
+        x = self.gelu(self.conv2(x))
+        # x = self.maxpool(x)
+        x = x + x1
+        x1 = x
+        x = self.gelu(self.conv3(x))
+        x = self.gelu(self.conv4(x))
+        x = x + x1
+        x = self.gelu(self.q(x))
+        # x = self.avgpool(x)
+        # x = x.permute(0, 2, 1)
+        x = torch.permute(x, [0, 2, 3, 1]).contiguous()
+        return x
