@@ -4,8 +4,9 @@ output/
 *.out
 *.pth
 
-# C extensions
+# C relative
 *.so
+*.pyc
 
 # Environments
 .env
