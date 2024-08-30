@@ -43,6 +43,7 @@ def args():
     parse.add_argument("--transfer", action="store_true", default=False, help="Transfer Learning")
     parse.add_argument("--local_rank", default=os.getenv('LOCAL_RANK', -1), type=int)
     parse.add_argument("--master_port", default=20500, type=int)
+    parse.add_argument("--sim", default=0.1, type=float, help="Similarity between origin and recovery.")
 
     args = parse.parse_args()
     return args
@@ -131,7 +132,7 @@ class ON(nn.Module):
         return x
 
 
-def mask_train(epochs: int, model: nn.Module, train_loader):
+def mask_train(epochs: int, model: nn.Module, train_loader, sim):
     better_loss = 10000000
     for epoch in range(epochs):
         model.train()
@@ -145,7 +146,7 @@ def mask_train(epochs: int, model: nn.Module, train_loader):
             # T = u.shape[-1]
 
             im = model(masked_a)
-            loss = loss_fn(im, a) + 0.2 * loss_fn(model(a), a)
+            loss = loss_fn(im, a) + sim * loss_fn(model(a), a)
             train_l2_full += loss.item()
 
             if train_l2_full < better_loss:
@@ -184,6 +185,7 @@ if __name__ == "__main__":
     S = 64
     learning_rate = args.lr
     epochs = args.epochs
+    sim = args.sim
     iterations = epochs * (raw_data['data'].shape[0] // batch_size)
 
     N = raw_data['data'].shape[0]
@@ -222,7 +224,8 @@ if __name__ == "__main__":
 
         mask_train(epochs=epochs // mask_times,
                    model=model,
-                   train_loader=train_loader)
+                   train_loader=train_loader,
+                   sim=sim)
     """
     import subprocess
     command = "torchrun --standalone --nnodes 1 --nproc_per_node 2 ./transfer_burgers.py --spectral --data_path './burgers_1d_1000.mat' --epochs 60000"

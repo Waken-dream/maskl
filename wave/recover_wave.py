@@ -41,12 +41,13 @@ def args():
     parse.add_argument("--transfer", action="store_true", default=False, help="Transfer Learning")
     parse.add_argument("--local_rank", default=os.getenv('LOCAL_RANK', -1), type=int)
     parse.add_argument("--master_port", default=20501, type=int)
+    parse.add_argument("--sim", default=0.1, type=float, help="Similarity between origin and recovery.")
 
     args = parse.parse_args()
     return args
 
 
-def mask_train(epochs: int, model: nn.Module, train_loader, test_loader):
+def mask_train(epochs: int, model: nn.Module, train_loader, test_loader, sim):
     better_loss = 10000000
     date_time = str(time.strftime('%m%d', time.localtime()))
     for epoch in range(epochs):
@@ -74,7 +75,7 @@ def mask_train(epochs: int, model: nn.Module, train_loader, test_loader):
                 masked_a = masked_a.to(device)
                 a = a.to(device)
                 im = model(masked_a)
-                loss = 0.8 * loss_fn(im, a) + 0.2 * loss_fn(model(a), a)
+                loss = 0.8 * loss_fn(im, a) + sim * loss_fn(model(a), a)
                 test_l2_step += loss.item()
 
             if test_l2_step < better_loss:
@@ -105,6 +106,7 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     sub = 1
     S = 64
+    sim = args.sim
     learning_rate = args.lr
     epochs = args.epochs
     local_rank = int(os.environ["LOCAL_RANK"])
@@ -155,6 +157,7 @@ if __name__ == '__main__':
         mask_train(epochs=epochs // mask_times,
                    model=model,
                    train_loader=train_loader,
-                   test_loader=test_loader)
+                   test_loader=test_loader,
+                   sim=sim)
         
         train_a = train_a.to('cpu').numpy()
