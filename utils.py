@@ -99,6 +99,7 @@ def releative_loss(a:torch.Tensor, b:torch.Tensor) -> float:
         res = torch.abs(a-b)
         rel = res / torch.abs(a)
     torch.mean()
+    
 def try_all_gpus():
     if torch.cuda.is_available():
         devices = [torch.device(f"cuda:{i}") for i in range(torch.cuda.device_count())]

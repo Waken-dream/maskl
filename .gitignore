@@ -3,6 +3,7 @@ output/
 *.log
 *.out
 *.pth
+*.xlsx
 
 # C relative
 *.so

@@ -169,7 +169,7 @@ if __name__ == "__main__":
     args = args()
     logging.basicConfig(level=logging.DEBUG,
                         filename=os.path.join(os.getcwd(),
-                                              f"./results/mean_re_burgers_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.log"),
+                                              f"./runlog/mean_re_burgers_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     N = raw_data['data'].shape[0]
     T = raw_data['data'].shape[2]
-    train_a = torch.tensor(raw_data['data'][:, :, :int(0.8 * T)]).float()
+    train_a = torch.tensor(raw_data['data'][:, :, :int(0.8 * T)]).float()   # Height * Width * Time
     train_u = torch.tensor(raw_data['data'][:, :, int(0.8 * T):]).float()
     test_a = torch.tensor(raw_data['data'][int(0.8 * N):, :, :int(0.8 * T)]).float()
     test_u = torch.tensor(raw_data['data'][int(0.8 * N):, :, int(0.8 * T):]).float()
