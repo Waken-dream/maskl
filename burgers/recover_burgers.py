@@ -149,7 +149,7 @@ def mask_train(epochs: int, model: nn.Module, train_loader, sim):
             loss = loss_fn(im, a) + sim * loss_fn(model(a), a)
             train_l2_full += loss.item()
 
-            if train_l2_full < better_loss:
+            if loss < better_loss:
                 better_loss = loss.item()
                 torch.save(model.module.state_dict(),
                                f"./results/mean_re_burgers_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.pth")

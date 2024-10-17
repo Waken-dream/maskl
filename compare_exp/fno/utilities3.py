@@ -1,3 +1,4 @@
+from copy import deepcopy
 import torch
 import numpy as np
 import scipy.io
@@ -322,3 +323,41 @@ def count_params(model):
         c += reduce(operator.mul, 
                     list(p.size()+(2,) if p.is_complex() else p.size()))
     return c
+
+
+def mask_burgers(data: torch.Tensor, mask_rate: float) -> torch.Tensor:
+    """
+    Args:
+        data (torch.Tensor): 3 dimension: (num_of_sample, resolution, time)
+        mask_rate (float): 
+
+    Returns:
+        torch.Tensor: same shape as input data
+    """
+    n, r, t = data.shape
+    mask_data = deepcopy(data)
+    mask_length = int(r * mask_rate)
+    random_start = torch.randint(low=0, high= r - mask_length, size=(1,)).item()
+    mask_token = torch.mean(torch.cat([mask_data[:,:random_start, :], mask_data[:,random_start+mask_length:, :]], dim=1))
+    mask_data[:, random_start:random_start + mask_length, :] = mask_token
+    return mask_data
+
+
+def mask_darcy(data: torch.Tensor, mask_rate: float) -> torch.Tensor:
+    n, r = data.shape[0], data.shape[2]
+    mask_data = deepcopy(data)
+    mask_length = int(r * mask_rate)
+    random_start = torch.randint(low=0, high= r - mask_length, size=(1,)).item()
+    mask_token = torch.mean(torch.cat([mask_data[:,:random_start, :, :], mask_data[:,random_start+mask_length:, :, :]], dim=1))
+    mask_data[:, random_start:random_start + mask_length, :] = mask_token
+    return mask_data
+
+
+def mask_ns(data: torch.Tensor, mask_rate: float) -> torch.Tensor:
+    n, r, t = data.shape[0], data.shape[2], data.shape[-1]
+    mask_data = deepcopy(data)
+    mask_length = int(t * mask_rate)
+    random_start = torch.randint(low=0, high= t - mask_length, size=(1,)).item()
+    mask_token = torch.mean(torch.cat([mask_data[...,:random_start], mask_data[..., random_start+mask_length:]], dim=-1))
+    mask_data[..., random_start: random_start+mask_length] = mask_token
+    return mask_data
