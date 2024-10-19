@@ -108,10 +108,10 @@ if __name__ == "__main__":
     from torchdiffeq import odeint_adjoint as odeint
     import torch.distributed as dist
 
-    y0 = torch.randn(100, 80, 80)
+    y0 = torch.randn(100, 1, 80, 80)
     #y0 = torch.randn(10, 1, 1024)
     t = torch.linspace(0,1,10)
-    model = NeuralPDE2d(in_channel=100, out_channel=16)
+    model = NeuralPDE2d(in_channel=1, out_channel=16)
     options = {
         "dtype": torch.float64,
         # "first_step":1.0e-9,

@@ -128,7 +128,7 @@ def train(model, t, args, train_loader, test_loader) -> nn.Module:
 
             if test_loss.item() < better_loss:
                     better_loss = test_loss.item()
-                    torch.save(model.module.state_dict(), f"results/train_{args.data}.pth")
+                    torch.save(model.module.state_dict(), f"results/train_{args.data}_{time.strftime('%m%d', time.localtime())}.pth")
 
         if epoch % 10 == 0:
             print(epoch, train_l2_step / 1000, test_l2_step / 100)
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     set_seed(13)
     logging.basicConfig(level=logging.DEBUG,
                         filename=os.path.join(os.getcwd(),
-                                              f"log/neural_{args.data}_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.log"),
+                                              f"log/neural_{args.data}_{args.mask_rate}_{args.method}_{time.strftime('%m%d', time.localtime())}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
         x_train = x_train.reshape(ntrain, s, 1).permute(0,2,1) # torch.Size([1000, 1, 1024])
         x_test = x_test.reshape(ntest, s, 1).permute(0,2,1)    # torch.Size([100, 1, 1024])
-        time = torch.linspace(0, 1, 10).to(device)
+        time_t = torch.linspace(0, 1, 10).to(device)
 
         mask_x_train = mask_burgers(x_train, mask_rate=args.mask_rate)
         mask_x_test = mask_burgers(x_test, mask_rate=args.mask_rate)
@@ -210,7 +210,7 @@ if __name__ == "__main__":
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
 
         train(model=model, 
-              t=time, 
+              t=time_t, 
               args=args, 
               train_loader=train_loader, 
               test_loader=test_loader)
@@ -250,7 +250,7 @@ if __name__ == "__main__":
 
         x_train = x_train.reshape(ntrain,s,s,1).permute(0, 3, 1, 2) # torch.Size([1000, 1, 49, 49])
         x_test = x_test.reshape(ntest,s,s,1).permute(0, 3, 1, 2)    # torch.Size([100, 1, 49, 49]
-        time = torch.linspace(0, 1, 10).to(device)
+        time_t = torch.linspace(0, 1, 10).to(device)
 
         mask_x_train = mask_darcy(x_train, mask_rate=args.mask_rate)
         mask_x_test = mask_darcy(x_test, mask_rate=args.mask_rate)
@@ -272,7 +272,7 @@ if __name__ == "__main__":
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
 
         train(model=model, 
-              t=time, 
+              t=time_t, 
               args=args, 
               train_loader=train_loader, 
               test_loader=test_loader)
@@ -308,7 +308,7 @@ if __name__ == "__main__":
 
         train_a = train_a.reshape(ntrain, S, S, 1).permute(0, 3, 1, 2)  # torch.Size([1000, 1, 64, 64])
         test_a = test_a.reshape(ntest, S, S, 1).permute(0, 3, 1, 2)  # torch.Size([200, 1, 64, 64])
-        time = torch.linspace(0, 20, 20).to(device)
+        time_t = torch.linspace(0, 20, 20).to(device)
 
         mask_x_train = mask_ns(train_u, mask_rate=args.mask_rate)
         mask_x_test = mask_ns(test_u, mask_rate=args.mask_rate)
@@ -330,7 +330,7 @@ if __name__ == "__main__":
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
 
         train(model=model, 
-              t=time, 
+              t=time_t, 
               args=args, 
               train_loader=train_loader, 
               test_loader=test_loader)

@@ -67,7 +67,7 @@ def train(model, args, train_loader, test_loader) -> nn.Module:
 
                 if test_loss.item() < better_loss:
                     better_loss = test_loss.item()
-                    torch.save(model.state_dict(), f"results/recover_{args.data}.pth")
+                    torch.save(model.state_dict(), f"results/recover_{args.data}_{time.strftime('%m%d', time.localtime())}.pth")
 
         if epoch % 10 == 0:
             print(epoch, train_l2_step / 1000, test_l2_step / 100)
