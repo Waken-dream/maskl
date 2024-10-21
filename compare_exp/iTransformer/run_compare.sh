@@ -24,7 +24,7 @@ torchrun --standalone --nnodes 1 --nproc_per_node 8 train.py \
    
 torchrun --standalone --nnodes 1 --nproc_per_node 8 train.py \
    --data ns \
-   --batch_size 8 \
+   --batch_size 4 \
    --master_port 20512 \
    --use_multi_gpu \
    --resolution 64 \

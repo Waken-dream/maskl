@@ -23,6 +23,7 @@ def args():
     parser = argparse.ArgumentParser(description="Train Recover Net")
 
     parser.add_argument("--data", type=str, required=True, help="PDE data selection")
+    parser.add_argument("-a", "--action", type=str, default="recover", help="Select mode: recover, train, test")
     parser.add_argument("--epoch", type=int, default=10000)
     parser.add_argument("--batch_size", default=20, type=int)
     parser.add_argument("--device", type=str, default='cuda')
@@ -34,7 +35,7 @@ def args():
     return args
 
 
-def train(model, args, train_loader, test_loader) -> nn.Module:
+def train_ON(model, args, train_loader, test_loader) -> nn.Module:
     better_loss = 10000000
 
     for epoch in range(args.epoch):
@@ -77,12 +78,118 @@ def train(model, args, train_loader, test_loader) -> nn.Module:
     return model
 
 
+def train(model, args, train_loader, test_loader) -> nn.Module:
+    better_loss = 10000000
+
+    for epoch in range(args.epoch):
+        train_l2_step = 0
+        test_l2_step = 0
+        model.train()
+
+        for i, (mask_a, a, u) in enumerate(train_loader):
+            a = a.float().to(args.device)
+            u = u.float().to(args.device)
+            #print(a.shape)
+            im = model(a)
+            print(f"mask_a: {mask_a.shape}, a: {a.shape}, im: {im.shape}")
+            train_loss = loss_fn(im, u)
+            train_l2_step += train_loss.item()
+                
+            optimizer.zero_grad()
+            train_loss.backward()
+            optimizer.step()
+            scheduler.step()
+
+        with torch.no_grad():
+            model.eval()
+            for i, (mask_a, a, u) in enumerate(test_loader):
+                a = a.float().to(args.device)
+                u = u.float().to(args.device)
+
+                im = model(a)
+                test_loss = loss_fn(im, u)
+                test_l2_step += test_loss.item()
+
+                if test_loss.item() < better_loss:
+                    better_loss = test_loss.item()
+                    torch.save(model.state_dict(), f"results/train_{args.data}_{time.strftime('%m%d', time.localtime())}.pth")
+
+        if epoch % 10 == 0:
+            print(epoch, train_l2_step / 1000, test_l2_step / 100)
+            logging.info(
+                f"epoch: {epoch}, train_l2_step: {train_l2_step / 1000}, test_l2_step: {test_l2_step/100}")
+
+    return model
+
+def train_ns(model, args, train_loader, test_loader) -> nn.Module:
+    better_loss = 100000
+    for ep in range(args.epoch):
+        model.train()
+        train_l2_step = 0
+        train_l2_full = 0
+        for _, xx, yy in train_loader:
+            loss = 0
+            xx = xx.to(args.device)  # torch.Size([20, 64, 64, 10])
+            yy = yy.to(args.device)  # torch.Size([20, 64, 64, 10])
+
+            for t in range(0, T, step):
+                y = yy[..., t:t + step]
+                im = model(xx)  # torch.Size([20, 64, 64, 1])
+                loss += loss_fn(im.reshape(batch_size, -1), y.reshape(batch_size, -1))
+
+                if t == 0:
+                    pred = im
+                else:
+                    pred = torch.cat((pred, im), -1)
+
+                xx = torch.cat((xx[..., step:], im), dim=-1)
+
+            train_l2_step += loss.item()
+            l2_full = loss_fn(pred.reshape(batch_size, -1), yy.reshape(batch_size, -1))
+            train_l2_full += l2_full.item()
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
+
+        test_l2_step = 0
+        test_l2_full = 0
+        with torch.no_grad():
+            for _, xx, yy in test_loader:
+                loss = 0
+                xx = xx.to(args.device)
+                yy = yy.to(args.device)
+
+                for t in range(0, T, step):
+                    y = yy[..., t:t + step]
+                    im = model(xx)
+                    loss += loss_fn(im.reshape(batch_size, -1), y.reshape(batch_size, -1))
+
+                    if t == 0:
+                        pred = im
+                    else:
+                        pred = torch.cat((pred, im), -1)
+
+                    xx = torch.cat((xx[..., step:], im), dim=-1)
+
+                test_l2_step += loss.item()
+                test_l2_full += loss_fn(pred.reshape(batch_size, -1), yy.reshape(batch_size, -1)).item()
+        
+        if test_l2_full < better_loss:
+                    better_loss = test_l2_full
+                    torch.save(model.state_dict(), f"results/train_{args.data}_{time.strftime('%m%d', time.localtime())}.pth")
+
+        logging.info(f"{ep}, {train_l2_step / ntrain / (T / step)}, {train_l2_full / ntrain}, "
+             f"{test_l2_step / ntest / (T / step)}")
+
+
 if __name__ == "__main__":
     args = args()
     set_seed(42)
     logging.basicConfig(level=logging.DEBUG,
                         filename=os.path.join(os.getcwd(),
-                                              f"log/mean_re_{args.data}_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.log"),
+                                              f"log/train_{args.data}_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
@@ -122,14 +229,20 @@ if __name__ == "__main__":
                                                 shuffle=True)
         test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(
             mask_x_test, x_test, y_test), batch_size=batch_size,
-                                                shuffle=False)
-        
-        model = Burgers_ON(in_features=1, length=resolution, width=args.width).to(args.device)
-        loss_fn = LpLoss(size_average=False)
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+                                                shuffle=False)        
 
-        train(model, args, train_loader=train_loader, test_loader=test_loader)
+        if args.action == "recover":
+            model = Burgers_ON(in_features=1, length=resolution, width=args.width).to(args.device)
+            loss_fn = LpLoss(size_average=False)
+            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+            train_ON(model, args, train_loader=train_loader, test_loader=test_loader)
+        elif args.action == "train":
+            model = FNO1d(modes, width).cuda()
+            loss_fn = LpLoss(size_average=False)
+            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+            train(model, args, train_loader=train_loader, test_loader=test_loader)
 
 
     elif args.data == "darcy":
@@ -174,12 +287,18 @@ if __name__ == "__main__":
         train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(mask_x_train, x_train, y_train), batch_size=batch_size, shuffle=True)
         test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(mask_x_test, x_test, y_test), batch_size=batch_size, shuffle=False)
 
-        model = Darcy_ON(in_features=1, length=resolution, width=args.width).to(args.device)
-        loss_fn = LpLoss(size_average=False)
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
-
-        train(model, args, train_loader=train_loader, test_loader=test_loader)
+        if args.action == "recover":
+            model = Darcy_ON(in_features=1, length=resolution, width=args.width).to(args.device)
+            loss_fn = LpLoss(size_average=False)
+            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+            train_ON(model, args, train_loader=train_loader, test_loader=test_loader)
+        elif args.action == "train":
+            model = FNO2d(modes, modes, width).cuda()
+            loss_fn = LpLoss(size_average=False)
+            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+            train(model, args, train_loader=train_loader, test_loader=test_loader)
 
     elif args.data == "ns":
 
@@ -224,12 +343,20 @@ if __name__ == "__main__":
         test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(mask_x_test, test_a, test_u), batch_size=batch_size,
                                                 shuffle=False)
         
-        model = ns_ON(in_features=T, length=S, width=args.width).to(args.device)
-        loss_fn = LpLoss(size_average=False)
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
 
-        train(model, args, train_loader=train_loader, test_loader=test_loader)
+        if args.action == "recover":
+            model = ns_ON(in_features=T, length=S, width=args.width).to(args.device)
+            loss_fn = LpLoss(size_average=False)
+            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+            train_ON(model, args, train_loader=train_loader, test_loader=test_loader)
+        elif args.action == "train":
+            model = FNO2d_time(modes, modes, width).cuda()
+            loss_fn = LpLoss(size_average=False)
+            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+            train_ns(model, args, train_loader=train_loader, test_loader=test_loader)
+
 
     else:
         raise NotImplementedError

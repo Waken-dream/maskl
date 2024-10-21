@@ -27,6 +27,7 @@ def args():
     parser = argparse.ArgumentParser(description="Train Recover Net")
 
     parser.add_argument("--data", type=str, required=True, help="PDE data selection")
+    parser.add_argument("-a", "--action", type=str, default="train", help="Select mode: train, test")
     parser.add_argument("--epoch", type=int, default=10000)
     parser.add_argument("--device", type=str, default='cuda')
     parser.add_argument("--batch_size", default=20, type=int)
