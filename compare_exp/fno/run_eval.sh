@@ -1,0 +1,59 @@
+#!/bin/bash
+
+python main.py -a eval --data burgers --mask_rate 0.1
+python main.py -a eval --data burgers --mask_rate 0.15
+python main.py -a eval --data burgers --mask_rate 0.2
+python main.py -a eval --data burgers --mask_rate 0.25
+python main.py -a eval --data burgers --mask_rate 0.3
+python main.py -a eval --data burgers --mask_rate 0.35
+python main.py -a eval --data burgers --mask_rate 0.4
+python main.py -a eval --data burgers --mask_rate 0.45
+python main.py -a eval --data burgers --mask_rate 0.5
+python main.py -a eval --data burgers --mask_rate 0.55
+python main.py -a eval --data burgers --mask_rate 0.6
+python main.py -a eval --data burgers --mask_rate 0.65
+python main.py -a eval --data burgers --mask_rate 0.7
+python main.py -a eval --data burgers --mask_rate 0.75
+python main.py -a eval --data burgers --mask_rate 0.8
+python main.py -a eval --data burgers --mask_rate 0.85
+python main.py -a eval --data burgers --mask_rate 0.9
+python main.py -a eval --data burgers --mask_rate 0.95
+
+python main.py -a eval --data darcy --mask_rate 0.1
+python main.py -a eval --data darcy --mask_rate 0.15
+python main.py -a eval --data darcy --mask_rate 0.2
+python main.py -a eval --data darcy --mask_rate 0.25
+python main.py -a eval --data darcy --mask_rate 0.3
+python main.py -a eval --data darcy --mask_rate 0.35
+python main.py -a eval --data darcy --mask_rate 0.4
+python main.py -a eval --data darcy --mask_rate 0.45
+python main.py -a eval --data darcy --mask_rate 0.5
+python main.py -a eval --data darcy --mask_rate 0.55
+python main.py -a eval --data darcy --mask_rate 0.6
+python main.py -a eval --data darcy --mask_rate 0.65
+python main.py -a eval --data darcy --mask_rate 0.7
+python main.py -a eval --data darcy --mask_rate 0.75
+python main.py -a eval --data darcy --mask_rate 0.8
+python main.py -a eval --data darcy --mask_rate 0.85
+python main.py -a eval --data darcy --mask_rate 0.9
+python main.py -a eval --data darcy --mask_rate 0.95
+
+python main.py -a eval --data ns --mask_rate 0.1
+python main.py -a eval --data ns --mask_rate 0.15
+python main.py -a eval --data ns --mask_rate 0.2
+python main.py -a eval --data ns --mask_rate 0.25
+python main.py -a eval --data ns --mask_rate 0.3
+python main.py -a eval --data ns --mask_rate 0.35
+python main.py -a eval --data ns --mask_rate 0.4
+python main.py -a eval --data ns --mask_rate 0.45
+python main.py -a eval --data ns --mask_rate 0.5
+python main.py -a eval --data ns --mask_rate 0.55
+python main.py -a eval --data ns --mask_rate 0.6
+python main.py -a eval --data ns --mask_rate 0.65
+python main.py -a eval --data ns --mask_rate 0.7
+python main.py -a eval --data ns --mask_rate 0.75
+python main.py -a eval --data ns --mask_rate 0.8
+python main.py -a eval --data ns --mask_rate 0.85
+python main.py -a eval --data ns --mask_rate 0.9
+python main.py -a eval --data ns --mask_rate 0.95
+

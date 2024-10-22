@@ -2,6 +2,7 @@
 Use Neural PDE to predict burgers, darcy flow and navier stocks equcations
 """
 import os
+import csv
 import time
 import logging
 import numpy as np
@@ -16,6 +17,7 @@ sys.path.append('/home/maozihao/maskl')
 from torchdiffeq import odeint_adjoint as odeint
 from neuralpde_model import *
 from compare_exp.fno.utilities3 import *
+from compare_exp.fno.fnomodel import Burgers_ON, Darcy_ON, ns_ON
 
 from utils import LpLoss, set_seed
 
@@ -27,7 +29,7 @@ def args():
     parser = argparse.ArgumentParser(description="Train Recover Net")
 
     parser.add_argument("--data", type=str, required=True, help="PDE data selection")
-    parser.add_argument("-a", "--action", type=str, default="train", help="Select mode: train, test")
+    parser.add_argument("-a", "--action",choices=['train', 'eval'], type=str, default="train", help="Select mode: train, eval")
     parser.add_argument("--epoch", type=int, default=10000)
     parser.add_argument("--device", type=str, default='cuda')
     parser.add_argument("--batch_size", default=20, type=int)
@@ -139,6 +141,108 @@ def train(model, t, args, train_loader, test_loader) -> nn.Module:
     return model
 
 
+def reduce_loss(loss):
+    """Reduce loss across all processes."""
+    dist.reduce(loss, dst=0, op=dist.ReduceOp.SUM)
+    return loss
+
+
+def eval_model(model, recover_model, t, args, train_loader, test_loader):
+    loss1 = 0
+    loss2 = 0
+    loss3 = 0
+    model.eval()
+    with torch.no_grad():
+        for i, (mask_a, a, u) in enumerate(test_loader):
+            mask_a = mask_a.to(device)
+            a = a.to(device)
+            u = u.to(device)
+
+            if args.data != "ns":
+                rec = recover_model(mask_a.permute(0,2,1))
+                rec = rec.permute(0,2,1)
+            else:
+                rec = recover_model(mask_a.repeat(1, 1, 1, 10))
+                rec = rec[..., :1]
+            options = {
+                "dtype": torch.float64,
+                # "first_step":1.0e-9,
+                # "grid_points":t,
+            }
+            adjoint_options = {
+                "norm": "seminorm"
+            }
+
+            out1 = odeint(
+                model, mask_a, t, method=args.method,
+                rtol=args.rtol, atol=args.atol,
+                options=options,
+                adjoint_options=adjoint_options
+            )
+            out2 = odeint(
+                model, rec, t, method=args.method,
+                rtol=args.rtol, atol=args.atol,
+                options=options,
+                adjoint_options=adjoint_options
+            )
+            out3 = odeint(
+                model, a, t, method=args.method,
+                rtol=args.rtol, atol=args.atol,
+                options=options,
+                adjoint_options=adjoint_options
+            )
+
+            if args.data == 'ns':
+                out1 = torch.squeeze(out1).permute(1, 0, 2, 3)
+                test_loss1 = loss_fn(out1.float(), u.float())
+                out2 = torch.squeeze(out2).permute(1, 0, 2, 3)
+                test_loss2 = loss_fn(out2.float(), u.float())
+                out3 = torch.squeeze(out3).permute(1, 0, 2, 3)
+                test_loss3 = loss_fn(out3.float(), u.float())
+            elif args.data == "burgers":
+                test_loss1 = loss_fn(out1[-1, ...].float(), u.float())
+                test_loss2 = loss_fn(out2[-1, ...].float(), u.float())
+                test_loss3 = loss_fn(out3[-1, ...].float(), u.float())
+            elif args.data == "darcy":
+                out1 = torch.squeeze(out1).permute(1, 0, 2, 3)
+                test_loss1 = loss_fn(out1[:, -1, : ,:].float(), u.float())
+                out2 = torch.squeeze(out2).permute(1, 0, 2, 3)
+                test_loss2 = loss_fn(out2[:, -1, : ,:].float(), u.float())
+                out3 = torch.squeeze(out3).permute(1, 0, 2, 3)
+                test_loss3 = loss_fn(out3[:, -1, : ,:].float(), u.float())
+            else:
+                raise NotImplementedError
+            
+            # 在所有进程上汇总loss
+            test_loss1 = reduce_loss(test_loss1)
+            test_loss2 = reduce_loss(test_loss2)
+            test_loss3 = reduce_loss(test_loss3)
+
+            if dist.get_rank() == 0:
+                loss1 += test_loss1.item()
+                loss2 += test_loss2.item()
+                loss3 += test_loss3.item()
+        
+    if dist.get_rank() == 0:
+        if not os.path.exists("/home/maozihao/maskl/compare_exp/neuralpde/compare.csv"):
+            title_info = [
+                ["data", "mask_rate", "corrupt_data_loss", "recovered_data_loss", "origin_data_loss", "rec_path", "model_path"],
+                [args.data, args.mask_rate, loss1/ntest, loss2/ntest, loss3/ntest, rec_path, model_path]
+                        ]
+            with open('compare.csv', mode='a', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                writer.writerows(title_info)
+        else:
+            eval_info = [
+                [args.data, args.mask_rate, loss1/ntest, loss2/ntest, loss3/ntest, rec_path, model_path]
+            ]
+            with open('compare.csv', mode='a', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                writer.writerows(eval_info)
+                
+    return 0
+
+
 
 if __name__ == "__main__":
     args = args()
@@ -204,17 +308,29 @@ if __name__ == "__main__":
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
                                                 sampler=test_sampler)
         
-        model = NeuralPDE1d(in_channel=1, out_channel=16).cuda()
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)  # multiply nodes
         loss_fn = LpLoss(size_average=False)
-        optimizer = torch.optim.Adam(model.module.parameters(), lr=learning_rate, weight_decay=1e-4)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
 
-        train(model=model, 
-              t=time_t, 
-              args=args, 
-              train_loader=train_loader, 
-              test_loader=test_loader)
+        if args.action == "train":
+            model = NeuralPDE1d(in_channel=1, out_channel=16).cuda()
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)  # multiply nodes
+            optimizer = torch.optim.Adam(model.module.parameters(), lr=learning_rate, weight_decay=1e-4)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+
+            train(model=model, 
+                t=time_t, 
+                args=args, 
+                train_loader=train_loader, 
+                test_loader=test_loader)
+        elif args.action == "eval":
+            rec_model = Burgers_ON(in_features=1, length=resolution, width=args.width).to(device)
+            rec_path = "/home/maozihao/maskl/compare_exp/fno/results/recover_burgers.pth"
+            rec_state_dict = torch.load(rec_path, weights_only=True)
+            rec_model.load_state_dict(rec_state_dict)
+            model = NeuralPDE1d(in_channel=1, out_channel=16).cuda()
+            model_path = "/home/maozihao/maskl/compare_exp/neuralpde/results/train_burgers.pth"
+            model_state_dict = torch.load(model_path, weights_only=True)
+            model.load_state_dict(model_state_dict)
+            eval_model(model=model, args=args, t=time_t, recover_model=rec_model, train_loader=train_loader, test_loader=test_loader)
 
     elif args.data == "darcy":
 
@@ -266,17 +382,30 @@ if __name__ == "__main__":
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
                                                 sampler=test_sampler)
         
-        model = NeuralPDE2d(in_channel=1, out_channel=16).cuda()
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)  # multiply nodes
         loss_fn = LpLoss(size_average=False)
-        optimizer = torch.optim.Adam(model.module.parameters(), lr=learning_rate, weight_decay=1e-4)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+        
+        if args.action == "train":
+            model = NeuralPDE2d(in_channel=1, out_channel=16).cuda()
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)  # multiply nodes
+            optimizer = torch.optim.Adam(model.module.parameters(), lr=learning_rate, weight_decay=1e-4)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
 
-        train(model=model, 
-              t=time_t, 
-              args=args, 
-              train_loader=train_loader, 
-              test_loader=test_loader)
+            train(model=model, 
+                t=time_t, 
+                args=args, 
+                train_loader=train_loader, 
+                test_loader=test_loader)
+        elif args.action == "eval":
+            rec_model = Darcy_ON(in_features=1, length=resolution, width=args.width).to(args.device)
+            rec_path = "/home/maozihao/maskl/compare_exp/fno/results/recover_darcy.pth"
+            rec_state_dict = torch.load(rec_path, weights_only=True)
+            rec_model.load_state_dict(rec_state_dict)
+            model = NeuralPDE2d(in_channel=1, out_channel=16).cuda()
+            model_path = '/home/maozihao/maskl/compare_exp/neuralpde/results/train_darcy.pth'
+            model_state_dict = torch.load(model_path, weights_only=True)
+            model.load_state_dict(model_state_dict)
+            eval_model(model=model, args=args, t=time_t, recover_model=rec_model, train_loader=train_loader, test_loader=test_loader)
+
 
     elif args.data == "ns":
 
@@ -324,17 +453,29 @@ if __name__ == "__main__":
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
                                                 sampler=test_sampler)
         
-        model = NeuralPDE2d(in_channel=1, out_channel=16).cuda()
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)  # multiply nodes
         loss_fn = LpLoss(size_average=False)
-        optimizer = torch.optim.Adam(model.module.parameters(), lr=learning_rate, weight_decay=1e-4)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+        
+        if args.action == "train":
+            model = NeuralPDE2d(in_channel=1, out_channel=16).cuda()
+            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)  # multiply nodes
+            optimizer = torch.optim.Adam(model.module.parameters(), lr=learning_rate, weight_decay=1e-4)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
 
-        train(model=model, 
-              t=time_t, 
-              args=args, 
-              train_loader=train_loader, 
-              test_loader=test_loader)
+            train(model=model, 
+                t=time_t, 
+                args=args, 
+                train_loader=train_loader, 
+                test_loader=test_loader)
+        elif args.action == "eval":
+            rec_model = ns_ON(in_features=T, length=S, width=args.width).to(args.device)
+            rec_path = "/home/maozihao/maskl/compare_exp/fno/results/recover_ns.pth"
+            rec_state_dict = torch.load(rec_path, weights_only=True)
+            rec_model.load_state_dict(rec_state_dict)
+            model = NeuralPDE2d(in_channel=1, out_channel=16).cuda()
+            model_path = '/home/maozihao/maskl/compare_exp/neuralpde/results/train_ns.pth'
+            model_state_dict = torch.load(model_path, weights_only=True)
+            model.load_state_dict(model_state_dict)
+            eval_model(model=model, args=args, t=time_t, recover_model=rec_model, train_loader=train_loader, test_loader=test_loader)
 
     else:
         raise NotImplementedError

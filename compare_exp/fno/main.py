@@ -4,6 +4,7 @@ Returns:
     _type_: _description_
 """
 import os
+import csv
 import time
 import logging
 from copy import deepcopy
@@ -23,7 +24,7 @@ def args():
     parser = argparse.ArgumentParser(description="Train Recover Net")
 
     parser.add_argument("--data", type=str, required=True, help="PDE data selection")
-    parser.add_argument("-a", "--action", type=str, default="recover", help="Select mode: recover, train, test")
+    parser.add_argument("-a", "--action",choices=['train', 'recover', 'eval'], type=str, default="recover", help="Select mode: recover, train, eval")
     parser.add_argument("--epoch", type=int, default=10000)
     parser.add_argument("--batch_size", default=20, type=int)
     parser.add_argument("--device", type=str, default='cuda')
@@ -182,6 +183,75 @@ def train_ns(model, args, train_loader, test_loader) -> nn.Module:
 
         logging.info(f"{ep}, {train_l2_step / ntrain / (T / step)}, {train_l2_full / ntrain}, "
              f"{test_l2_step / ntest / (T / step)}")
+        
+
+def eval_model(model, recover_model, args, train_loader, test_loader):
+    loss1 = 0
+    loss2 = 0
+    loss3 = 0
+    model.eval()
+    with torch.no_grad():
+        if args.data != "ns":
+            for i, (mask_a, a, u) in enumerate(test_loader):
+                mask_a = mask_a.to(device)
+                a = a.to(device)
+                u = u.to(device)
+
+                rec = recover_model(mask_a)
+                out1 = model(mask_a)
+                out2 = model(rec)
+                out3 = model(a)
+
+                loss1 += loss_fn(out1, u).item()
+                loss2 += loss_fn(out2, u).item()
+                loss3 += loss_fn(out3, u).item()
+        else:
+            for ma, xx, yy in test_loader:
+                loss_1 = 0
+                loss_2 = 0
+                loss_3 = 0
+                ma = ma.to(args.device)
+                xx = xx.to(args.device)
+                yy = yy.to(args.device)
+                rec = recover_model(ma)
+
+                for t in range(0, T, step):
+                    y = yy[..., t:t + step]
+                    out1 = model(ma)
+                    out2 = model(rec)
+                    im = model(xx)
+                    loss_1 += loss_fn(out1.reshape(batch_size, -1), y.reshape(batch_size, -1))
+                    loss_2 += loss_fn(out2.reshape(batch_size, -1), y.reshape(batch_size, -1))
+                    loss_3 += loss_fn(im.reshape(batch_size, -1), y.reshape(batch_size, -1))
+
+                    if t == 0:
+                        pred = im
+                    else:
+                        pred = torch.cat((pred, im), -1)
+
+                    xx = torch.cat((xx[..., step:], im), dim=-1)
+
+                loss1 += loss_1.item()
+                loss2 += loss_2.item()
+                loss3 += loss_3.item()
+        
+        if not os.path.exists("/home/maozihao/maskl/compare_exp/fno/compare.csv"):
+            title_info = [
+                ["data", "mask_rate", "corrupt_data_loss", "recovered_data_loss", "origin_data_loss", "rec_path", "model_path"],
+                [args.data, args.mask_rate, loss1/ntest, loss2/ntest, loss3/ntest, rec_path, model_path]
+                          ]
+            with open('compare.csv', mode='a', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                writer.writerows(title_info)
+        else:
+            eval_info = [
+                [args.data, args.mask_rate, loss1/ntest, loss2/ntest, loss3/ntest, rec_path, model_path]
+            ]
+            with open('compare.csv', mode='a', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                writer.writerows(eval_info)
+
+    return 0
 
 
 if __name__ == "__main__":
@@ -189,11 +259,12 @@ if __name__ == "__main__":
     set_seed(42)
     logging.basicConfig(level=logging.DEBUG,
                         filename=os.path.join(os.getcwd(),
-                                              f"log/train_{args.data}_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.log"),
+                                              f"log/{args.action}_{args.data}_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
     logging.info(args)
+    device = args.device
 
     if args.data == "burgers":
         ntrain = 1000
@@ -243,6 +314,17 @@ if __name__ == "__main__":
             optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
             train(model, args, train_loader=train_loader, test_loader=test_loader)
+        elif args.action == "eval":
+            rec_model = Burgers_ON(in_features=1, length=resolution, width=args.width).to(device)
+            rec_path = "/home/maozihao/maskl/compare_exp/fno/results/recover_burgers.pth"
+            rec_state_dict = torch.load(rec_path, weights_only=True)
+            rec_model.load_state_dict(rec_state_dict)
+            loss_fn = LpLoss(size_average=False)
+            model = FNO1d(modes, width).to(device)
+            model_path = "/home/maozihao/maskl/compare_exp/fno/results/train_burgers_1021.pth"
+            model_state_dict = torch.load(model_path, weights_only=True)
+            model.load_state_dict(model_state_dict)
+            eval_model(model=model, args=args, recover_model=rec_model, train_loader=train_loader, test_loader=test_loader)
 
 
     elif args.data == "darcy":
@@ -299,6 +381,17 @@ if __name__ == "__main__":
             optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
             train(model, args, train_loader=train_loader, test_loader=test_loader)
+        elif args.action == "eval":
+            rec_model = Darcy_ON(in_features=1, length=resolution, width=args.width).to(args.device)
+            rec_path = "/home/maozihao/maskl/compare_exp/fno/results/recover_darcy.pth"
+            rec_state_dict = torch.load(rec_path, weights_only=True)
+            rec_model.load_state_dict(rec_state_dict)
+            loss_fn = LpLoss(size_average=False)
+            model = FNO2d(modes, modes, width).cuda()
+            model_path = '/home/maozihao/maskl/compare_exp/fno/results/train_darcy_1021.pth'
+            model_state_dict = torch.load(model_path, weights_only=True)
+            model.load_state_dict(model_state_dict)
+            eval_model(model=model, args=args, recover_model=rec_model, train_loader=train_loader, test_loader=test_loader)
 
     elif args.data == "ns":
 
@@ -327,8 +420,8 @@ if __name__ == "__main__":
         test_a = reader.read_field('u')[-ntest:, ::sub, ::sub, :T_in]
         test_u = reader.read_field('u')[-ntest:, ::sub, ::sub, T_in:T + T_in]
 
-        print(train_u.shape)
-        print(test_u.shape)
+        #print(train_u.shape)
+        #print(test_u.shape)
         assert (S == train_u.shape[-2])
         assert (T == train_u.shape[-1])
 
@@ -356,7 +449,17 @@ if __name__ == "__main__":
             optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
             train_ns(model, args, train_loader=train_loader, test_loader=test_loader)
-
+        elif args.action == "eval":
+            rec_model = ns_ON(in_features=T, length=S, width=args.width).to(args.device)
+            rec_path = "/home/maozihao/maskl/compare_exp/fno/results/recover_ns.pth"
+            rec_state_dict = torch.load(rec_path, weights_only=True)
+            rec_model.load_state_dict(rec_state_dict)
+            loss_fn = LpLoss(size_average=False)
+            model = FNO2d_time(modes, modes, width).cuda()
+            model_path = '/home/maozihao/maskl/compare_exp/fno/results/train_ns_1021.pth'
+            model_state_dict = torch.load(model_path, weights_only=True)
+            model.load_state_dict(model_state_dict)
+            eval_model(model=model, args=args, recover_model=rec_model, train_loader=train_loader, test_loader=test_loader)
 
     else:
         raise NotImplementedError

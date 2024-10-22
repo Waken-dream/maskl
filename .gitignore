@@ -22,6 +22,7 @@ venv/
 
 # Data
 data/*
+*.csv
 
 # Jupyter
 *.ipynb
