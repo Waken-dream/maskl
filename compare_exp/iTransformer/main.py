@@ -17,6 +17,7 @@ sys.path.append('/home/maozihao/maskl')
 from iTransformer import iTransformer
 from utils import set_seed, LpLoss
 from compare_exp.fno.utilities3 import MatReader, UnitGaussianNormalizer, mask_burgers, mask_darcy, mask_ns
+from compare_exp.fno.fnomodel import Burgers_ON, Darcy_ON, ns_ON
 
 
 def args():
@@ -72,7 +73,7 @@ def args():
 
 
 def train(model, t, args, train_loader, test_loader):
-    better_loss = 10000000
+    better_loss = 99999999999999999
 
     for epoch in range(args.epoch):
         train_l2_step = 0
@@ -117,6 +118,10 @@ def train(model, t, args, train_loader, test_loader):
 
     return model
 
+
+def eval_model(model, t, args, train_loader, test_loader):
+
+    return
     
 
 
@@ -143,7 +148,7 @@ if __name__ == "__main__":
     
     logging.basicConfig(level=logging.DEBUG,
                         filename=os.path.join(os.getcwd(),
-                                            f"log/iTransformer_{args.data}_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.log"),
+                                            f"log/{args.action}_iTransformer_{args.data}_{args.mask_rate}_{time.strftime('%m%d', time.localtime())}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
@@ -206,17 +211,27 @@ if __name__ == "__main__":
                                                 sampler=test_sampler)
         
         model = iTransformer(args).float().cuda()
-        if args.use_multi_gpu:
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
-            loss_fn = LpLoss(size_average=False)
-            optimizer = torch.optim.Adam(model.module.parameters(), lr=learning_rate, weight_decay=1e-4)
-            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
-        else:
-            loss_fn = LpLoss(size_average=False)
-            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
-            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
-        print("Start training")
-        train(model, time_t, args, train_loader=train_loader, test_loader=test_loader)
+        if args.action == "train":
+            if args.use_multi_gpu:
+                model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
+                loss_fn = LpLoss(size_average=False)
+                optimizer = torch.optim.Adam(model.module.parameters(), lr=learning_rate, weight_decay=1e-4)
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+            else:
+                loss_fn = LpLoss(size_average=False)
+                optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+            print("Start training")
+            train(model, time_t, args, train_loader=train_loader, test_loader=test_loader)
+        elif args.action == 'eval':
+            rec_model = Burgers_ON(in_features=1, length=resolution, width=args.width).to(device)
+            rec_path = "/home/maozihao/maskl/compare_exp/fno/results/recover_burgers.pth"
+            rec_state_dict = torch.load(rec_path, weights_only=True)
+            rec_model.load_state_dict(rec_state_dict)
+            model_path = "compare_exp/iTransformer/checkpoints/ns_sl10_ll20_pl10_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue"
+            model_state_dict = torch.load(model_path, weights_only=True)
+            model.load_state_dict(model_state_dict)
+            eval_model(model=model, args=args, t=time_t, recover_model=rec_model, train_loader=train_loader, test_loader=test_loader)
 
     elif args.data == "darcy":
 

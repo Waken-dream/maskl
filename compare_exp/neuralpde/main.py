@@ -158,10 +158,13 @@ def eval_model(model, recover_model, t, args, train_loader, test_loader):
             a = a.to(device)
             u = u.to(device)
 
-            if args.data != "ns":
-                rec = recover_model(mask_a.permute(0,2,1))
-                rec = rec.permute(0,2,1)
-            else:
+            if args.data == "burgers":
+                rec = recover_model(mask_a.permute(0, 2, 1))
+                rec = rec.permute(0, 2, 1)
+            elif args.data == "darcy":
+                rec = recover_model(mask_a.permute(0, 2, 3, 1))
+                rec = rec.permute(0, 3, 1, 2)
+            elif args.data == "ns":
                 rec = recover_model(mask_a.repeat(1, 1, 1, 10))
                 rec = rec[..., :1]
             options = {
@@ -249,7 +252,7 @@ if __name__ == "__main__":
     set_seed(13)
     logging.basicConfig(level=logging.DEBUG,
                         filename=os.path.join(os.getcwd(),
-                                              f"log/neural_{args.data}_{args.mask_rate}_{args.method}_{time.strftime('%m%d', time.localtime())}.log"),
+                                              f"log/{args.action}_{args.data}_{args.mask_rate}_{args.method}_{time.strftime('%m%d', time.localtime())}.log"),
                         format='%(asctime)s %(levelname)s: %(message)s')
     logging.info('------------------------------------------------------------------------------------')
     logging.info('File path: {}'.format(os.path.abspath(__file__)))
