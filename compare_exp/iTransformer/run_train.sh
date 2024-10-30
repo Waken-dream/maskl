@@ -4,6 +4,7 @@ model_name=iTransformer
 echo "All tasks started."
 
 torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py \
+   --action train \
    --data burgers \
    --master_port 20510 \
    --use_multi_gpu \
@@ -13,6 +14,7 @@ torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py \
    --pred_len 1 &
 
 torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py \
+   --action train \
    --data darcy \
    --batch_size 8 \
    --master_port 20511 \
@@ -23,6 +25,7 @@ torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py \
    --pred_len 1 &
    
 torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py \
+   --action train \
    --data ns \
    --batch_size 4 \
    --master_port 20512 \

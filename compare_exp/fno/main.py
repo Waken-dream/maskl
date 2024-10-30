@@ -69,7 +69,7 @@ def train_ON(model, args, train_loader, test_loader) -> nn.Module:
 
                 if test_loss.item() < better_loss:
                     better_loss = test_loss.item()
-                    torch.save(model.state_dict(), f"results/recover_{args.data}_{time.strftime('%m%d', time.localtime())}.pth")
+                    torch.save(model.state_dict(), f"results/recover_ON(layernorm)_{args.data}_{args.sim}_{time.strftime('%m%d', time.localtime())}.pth")
 
         if epoch % 10 == 0:
             print(epoch, train_l2_step / 1000, test_l2_step / 100)
@@ -303,7 +303,9 @@ if __name__ == "__main__":
                                                 shuffle=False)        
 
         if args.action == "recover":
-            model = Burgers_ON(in_features=1, length=resolution, width=args.width).to(args.device)
+            #model = ON_1d(in_features=x_train.shape[-1], width=20).to(device)
+            #model = Burgers_ON(in_features=1, length=resolution, width=args.width).to(args.device)
+            model = Burgers_ON_l(in_features=1, length=resolution, width=args.width).to(args.device)
             loss_fn = LpLoss(size_average=False)
             optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
@@ -370,7 +372,9 @@ if __name__ == "__main__":
         test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(mask_x_test, x_test, y_test), batch_size=batch_size, shuffle=False)
 
         if args.action == "recover":
-            model = Darcy_ON(in_features=1, length=resolution, width=args.width).to(args.device)
+            #model = ON_2d(in_features=x_train.shape[-1], width=20).to(device)
+            #model = Darcy_ON(in_features=1, length=resolution, width=args.width).to(args.device)
+            model = Darcy_ON_l(in_features=1, length=resolution, width=args.width).to(args.device)
             loss_fn = LpLoss(size_average=False)
             optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
@@ -438,7 +442,9 @@ if __name__ == "__main__":
         
 
         if args.action == "recover":
-            model = ns_ON(in_features=T, length=S, width=args.width).to(args.device)
+            #model = ON_2d(in_features=train_a.shape[-1], width=20).to(device)
+            #model = ns_ON(in_features=T, length=S, width=args.width).to(args.device)
+            model = ns_ON_l(in_features=T, length=S, width=args.width).to(args.device)
             loss_fn = LpLoss(size_average=False)
             optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-2)
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)

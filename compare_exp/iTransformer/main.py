@@ -228,7 +228,7 @@ if __name__ == "__main__":
             rec_path = "/home/maozihao/maskl/compare_exp/fno/results/recover_burgers.pth"
             rec_state_dict = torch.load(rec_path, weights_only=True)
             rec_model.load_state_dict(rec_state_dict)
-            model_path = "compare_exp/iTransformer/checkpoints/ns_sl10_ll20_pl10_dm512_nh8_el2_dl1_df2048_fc1_ebtimeF_dtTrue"
+            model_path = ""
             model_state_dict = torch.load(model_path, weights_only=True)
             model.load_state_dict(model_state_dict)
             eval_model(model=model, args=args, t=time_t, recover_model=rec_model, train_loader=train_loader, test_loader=test_loader)

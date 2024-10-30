@@ -11,6 +11,7 @@ import torch
 import torch.optim as optim
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
+from rich import traceback
 import sys
 
 sys.path.append('/home/maozihao/maskl')
@@ -21,6 +22,7 @@ from compare_exp.fno.fnomodel import Burgers_ON, Darcy_ON, ns_ON
 
 from utils import LpLoss, set_seed
 
+traceback.install()
 os.environ["CUDA_DEVICES_MAX_CONNECTIONS"]='1'
 os.environ["OMP_NUM_THREADS"] = "1"
 
@@ -165,8 +167,10 @@ def eval_model(model, recover_model, t, args, train_loader, test_loader):
                 rec = recover_model(mask_a.permute(0, 2, 3, 1))
                 rec = rec.permute(0, 3, 1, 2)
             elif args.data == "ns":
-                rec = recover_model(mask_a.repeat(1, 1, 1, 10))
-                rec = rec[..., :1]
+                rec_1 = recover_model(mask_a.permute(0, 2, 3, 1)[..., :T])
+                rec_2 = recover_model(mask_a.permute(0, 2, 3, 1)[..., T:])
+                rec = torch.concat([rec_1, rec_2], dim=-1)
+                rec = rec.permute(0, 3, 1, 2)
             options = {
                 "dtype": torch.float64,
                 # "first_step":1.0e-9,
@@ -177,13 +181,13 @@ def eval_model(model, recover_model, t, args, train_loader, test_loader):
             }
 
             out1 = odeint(
-                model, mask_a, t, method=args.method,
+                model, mask_a[:, 0:1, :, :], t, method=args.method,
                 rtol=args.rtol, atol=args.atol,
                 options=options,
                 adjoint_options=adjoint_options
             )
             out2 = odeint(
-                model, rec, t, method=args.method,
+                model, rec[:, 0:1, :, :], t, method=args.method,
                 rtol=args.rtol, atol=args.atol,
                 options=options,
                 adjoint_options=adjoint_options
