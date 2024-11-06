@@ -435,10 +435,18 @@ if __name__ == "__main__":
         mask_x_train = mask_ns(train_a, mask_rate=args.mask_rate)
         mask_x_test = mask_ns(test_a, mask_rate=args.mask_rate)
 
-        train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(mask_x_train, train_a, train_u), batch_size=batch_size,
-                                                shuffle=True)
-        test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(mask_x_test, test_a, test_u), batch_size=batch_size,
-                                                shuffle=False)
+
+
+        if args.action == 'recover':
+            train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(mask_x_train, torch.cat([train_a,train_a], dim=0), torch.cat([train_u,train_u], dim=0)), batch_size=batch_size,
+                                                    shuffle=True)
+            test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(mask_x_test, torch.cat([test_a,test_a], dim=0), torch.cat([test_u,test_u], dim=0)), batch_size=batch_size,
+                                                    shuffle=False)
+        else:
+            train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(mask_x_train, train_a, train_u), batch_size=batch_size,
+                                                    shuffle=True)
+            test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(mask_x_test, test_a, test_u), batch_size=batch_size,
+                                                    shuffle=False)
         
 
         if args.action == "recover":
@@ -456,8 +464,8 @@ if __name__ == "__main__":
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
             train_ns(model, args, train_loader=train_loader, test_loader=test_loader)
         elif args.action == "eval":
-            rec_model = ns_ON(in_features=T, length=S, width=args.width).to(args.device)
-            rec_path = "/home/maozihao/maskl/compare_exp/fno/results/recover_ns.pth"
+            rec_model = ON_2d(in_features=train_a.shape[-1], width=20).to(device)
+            rec_path = './results/recover_ON(old)_ns_0.0_1026.pth'
             rec_state_dict = torch.load(rec_path, weights_only=True)
             rec_model.load_state_dict(rec_state_dict)
             loss_fn = LpLoss(size_average=False)

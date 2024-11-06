@@ -18,7 +18,7 @@ sys.path.append('/home/maozihao/maskl')
 from torchdiffeq import odeint_adjoint as odeint
 from neuralpde_model import *
 from compare_exp.fno.utilities3 import *
-from compare_exp.fno.fnomodel import Burgers_ON, Darcy_ON, ns_ON
+from compare_exp.fno.fnomodel import Burgers_ON, Darcy_ON, ns_ON, ON_2d
 
 from utils import LpLoss, set_seed
 
@@ -474,8 +474,8 @@ if __name__ == "__main__":
                 train_loader=train_loader, 
                 test_loader=test_loader)
         elif args.action == "eval":
-            rec_model = ns_ON(in_features=T, length=S, width=args.width).to(args.device)
-            rec_path = "/home/maozihao/maskl/compare_exp/fno/results/recover_ns.pth"
+            rec_model = ON_2d(in_features=10, width=20).to(device)
+            rec_path = '/home/maozihao/maskl/compare_exp/fno/results/recover_ON(old)_ns_0.0_1026.pth'
             rec_state_dict = torch.load(rec_path, weights_only=True)
             rec_model.load_state_dict(rec_state_dict)
             model = NeuralPDE2d(in_channel=1, out_channel=16).cuda()

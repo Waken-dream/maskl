@@ -128,9 +128,9 @@ class Darcy_ON(nn.Module):
 
     def forward(self, x):
         n_sample = x.shape[0]
-        x = x.view(n_sample, -1 ,1)
+        x = x.reshape(n_sample, -1 ,1)
         x, (_, __) = self.lstm(x)
-        x = x.view(n_sample, self.length, self.length, self.width)
+        x = x.reshape(n_sample, self.length, self.length, self.width)
         grid = self.__get_grid(shape=x.shape, device=x.device)
         x = torch.cat((x, grid), dim=-1)
         x = x.permute(0, 3, 1, 2)
@@ -176,9 +176,9 @@ class ns_ON(nn.Module):
     
     def forward(self, x):
         n_sample, t = x.shape[0], x.shape[-1]
-        x = x.view(n_sample, -1 ,t)
+        x = x.reshape(n_sample, -1 ,t)
         x, (_, __) = self.lstm(x)
-        x = x.view(n_sample, self.length, self.length, 4*self.width)
+        x = x.reshape(n_sample, self.length, self.length, 4*self.width)
         grid = self.__get_grid(shape=x.shape, device=x.device)
         x = torch.cat((x, grid), dim=-1)
         x = x.permute(0, 3, 1, 2)
@@ -222,9 +222,9 @@ class Darcy_ON_l(nn.Module):
     
     def forward(self, x):
         n_sample = x.shape[0]
-        x = x.view(n_sample, -1, 1)
+        x = x.reshape(n_sample, -1, 1)
         x, (_, __) = self.lstm(x)
-        x = x.view(n_sample, self.length, self.length, self.width)
+        x = x.reshape(n_sample, self.length, self.length, self.width)
         grid = self.__get_grid(shape=x.shape, device=x.device)
         x = torch.cat((x, grid), dim=-1)
         x = x.permute(0, 3, 1, 2)
@@ -268,9 +268,9 @@ class ns_ON_l(nn.Module):
     
     def forward(self, x):
         n_sample, t = x.shape[0], x.shape[-1]
-        x = x.view(n_sample, -1, t)
+        x = x.reshape(n_sample, -1, t)
         x, (_, __) = self.lstm(x)
-        x = x.view(n_sample, self.length, self.length, 4*self.width)
+        x = x.reshape(n_sample, self.length, self.length, 4*self.width)
         grid = self.__get_grid(shape=x.shape, device=x.device)
         x = torch.cat((x, grid), dim=-1)
         x = x.permute(0, 3, 1, 2)

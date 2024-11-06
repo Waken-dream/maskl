@@ -355,9 +355,15 @@ def mask_darcy(data: torch.Tensor, mask_rate: float) -> torch.Tensor:
 
 def mask_ns(data: torch.Tensor, mask_rate: float) -> torch.Tensor:
     n, r, t = data.shape[0], data.shape[2], data.shape[-1]
-    mask_data = deepcopy(data)
+    mask_data_1 = deepcopy(data)
     mask_length = int(t * mask_rate)
     random_start = torch.randint(low=0, high= t - mask_length, size=(1,)).item()
-    mask_token = torch.mean(torch.cat([mask_data[...,:random_start], mask_data[..., random_start+mask_length:]], dim=-1))
-    mask_data[..., random_start: random_start+mask_length] = mask_token
+    mask_token = torch.mean(torch.cat([mask_data_1[...,:random_start], mask_data_1[..., random_start+mask_length:]], dim=-1))
+    mask_data_1[..., random_start: random_start+mask_length] = mask_token
+    mask_data_2 = deepcopy(data)
+    mask_length = int(r * mask_rate)
+    random_start = torch.randint(low=0, high= r - mask_length, size=(1,)).item()
+    mask_token = torch.mean(torch.cat([mask_data_1[:, :random_start,:,:], mask_data_1[:, random_start+mask_length:,:,:]], dim=1))
+    mask_data_2[:, random_start: random_start+mask_length, :, :] = mask_token
+    mask_data = torch.cat([mask_data_1,mask_data_2], dim=0)
     return mask_data

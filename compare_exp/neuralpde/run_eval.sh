@@ -1,22 +1,22 @@
 #!/bin/bash
 
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.1
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.15
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.2
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.25
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.3
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.35
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.4
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.45
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.5
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.55
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.6
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.65
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.7
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.75
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.8
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.85
-#torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.9
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.1
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.15
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.2
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.25
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.3
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.35
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.4
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.45
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.5
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.55
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.6
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.65
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.7
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.75
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.8
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.85
+torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data burgers --method rk4 --master_port 20508 --mask_rate 0.9
 
 torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data darcy --method rk4 --master_port 20508 --mask_rate 0.10
 torchrun --standalone --nnodes 1 --nproc_per_node 8 main.py -a eval --data darcy --method rk4 --master_port 20508 --mask_rate 0.15
